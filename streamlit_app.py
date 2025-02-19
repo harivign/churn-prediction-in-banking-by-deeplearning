@@ -5,10 +5,16 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.layers import Dense,Dropout
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import load_model
 
-def load_model(model_path):
-    with open(model_path, 'rb') as file:
-        return pickle.load(file)
+def load_model_properly(model_path):
+    return load_model(model_path)
+
+churn_model = load_model_properly('result.h5')
+
+# def load_model(model_path):
+#     with open(model_path, 'rb') as file:
+#         return pickle.load(file)
 
 churn_model = load_model('result.h5')
 encoder_geography = load_model('encoder_geography.pkl')
