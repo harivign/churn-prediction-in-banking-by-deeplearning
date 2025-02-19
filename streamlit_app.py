@@ -2,8 +2,7 @@ import streamlit as st
 import pickle
 import numpy as np
 import pandas as pd
-from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import LeakyReLU
+
 
 def load_model(model_path):
     with open(model_path, 'rb') as file:
