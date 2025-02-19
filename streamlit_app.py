@@ -2,7 +2,7 @@ import streamlit as st
 import pickle
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+import tensorflow 
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import LeakyReLU
 
