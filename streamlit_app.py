@@ -2,7 +2,9 @@ import streamlit as st
 import pickle
 import numpy as np
 import pandas as pd
-
+import tensorflow as tf
+from tensorflow.keras.layers import Dense,Dropout
+from tensorflow.keras.models import Sequential
 
 def load_model(model_path):
     with open(model_path, 'rb') as file:
