@@ -1,31 +1,51 @@
-import streamlit as st 
+import streamlit as st
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import load_model
-import pickle
+from tensorflow.keras.layers import LeakyReLU 
+import base64
 
-# Load Keras model properly
-@st.cache_resource
-def load_keras_model():
-    return load_model('result.h5')
+def add_bg_from_local(image_path):
+    with open(image_path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+    
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/png;base64,{encoded_string}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+add_bg_from_local(r"background_image.webp")
+
+
+try:
+    
+    churn_model = load_model("result4.h5", custom_objects={"LeakyReLU": tf.keras.layers.LeakyReLU})
+    st.write("✅ Model Loaded Successfully!")
+except Exception as e:
+    st.error(f"⚠️ Error loading model: {e}")
 
 # Load encoders
-@st.cache_resource
-def load_encoder(path):
-    with open(path, 'rb') as file:
-        return pickle.load(file)
+import pickle
+with open("encoder_go.pkl", "rb") as f:
+    encoder_geography = pickle.load(f)
 
-churn_model = load_keras_model()
-encoder_geography = load_encoder('encoder_geography.pkl')
-encoder_gender = load_encoder('encoder_gender.pkl')
+with open("encoder_gender.pkl", "rb") as f:
+    encoder_gender = pickle.load(f)
 
 # Load dataset
-dataset = pd.read_csv('cleaned_churn_data.csv')
+dataset = pd.read_csv("my_data.csv")
 
-# Streamlit UI
-st.title('Churn Prediction in Banking')
-st.write('Customer churn in banking refers to the likelihood of a customer leaving the bank (e.g., closing their account). Churn prediction uses machine learning to analyze customer behavior and identify those at risk of leaving.')
+st.title("Churn Prediction in Banking")
 
 categories = ["Geography", "Gender"]
 dropdown_options = {feature: dataset[feature].unique().tolist() for feature in categories}
@@ -35,11 +55,11 @@ with st.form("Churn Prediction Form"):
     with col1:
         creditscore = st.number_input("Enter Credit Score", min_value=300, max_value=850)
     with col2:
-        geography_select = st.selectbox('Geography', dropdown_options['Geography'])
-        geography = encoder_geography.transform([geography_select])[0]  # Fixed
+        geography_select = st.selectbox("Geography", dropdown_options["Geography"])
+        geography =int( encoder_geography.transform([[geography_select]])[0])
     with col3:
-        gender_select = st.selectbox('Gender', dropdown_options['Gender'])
-        gender = encoder_gender.transform([gender_select])[0]  # Fixed
+        gender_select = st.selectbox("Gender", dropdown_options["Gender"])
+        gender = int(encoder_gender.transform([[gender_select]])[0])
 
     col4, col5, col6 = st.columns(3)
     with col4:
@@ -48,20 +68,30 @@ with st.form("Churn Prediction Form"):
         tenure = st.number_input("Enter Tenure", min_value=0, max_value=10)
     with col6:
         balance = st.number_input("Enter Balance", min_value=0)
-
+        
     col7, col8, col9 = st.columns(3)
     with col7:
         numofproducts = st.number_input("Enter Number of Products", min_value=1, max_value=4)
     with col8:
-        hascrcard = st.radio("Has Credit Card?", [0, 1])
+        hascrcard = st.selectbox("Has Credit Card?", ["No", "Yes"])
+        hascrcard = 1 if hascrcard == "Yes" else 0
     with col9:
-        isactivemember = st.radio("Is Active Member?", [0, 1])
-
+        isactivemember = st.selectbox("Is Active Member?", ["No", "Yes"])
+        isactivemember = 1 if isactivemember == "Yes" else 0
+    
     estimatedsalary = st.number_input("Enter Estimated Salary", min_value=0)
 
-    if st.form_submit_button(label='Predict'):
-        input_data = np.array([[creditscore, geography, gender, age, tenure, balance, numofproducts, hascrcard, isactivemember, estimatedsalary]])
-        prediction = (churn_model.predict(input_data) > 0.5).astype(int)  # Fixed model prediction
-        
-        result_text = "Customer is **likely to churn**" if prediction[0] == 1 else "Customer is **not likely to churn**"
-        st.subheader(result_text)
+    submit_button = st.form_submit_button("Predict")
+
+
+if submit_button:
+    with open("scaler.pkl", "rb") as f:
+        scaler = pickle.load(f)
+    input_data = np.array([[creditscore, geography, gender, age, tenure, balance, numofproducts, hascrcard, isactivemember, estimatedsalary]])
+    input_data1 = scaler.transform(input_data)
+    prediction = churn_model.predict(input_data1)
+
+    result_text = "Customer is **likely to churn**" if prediction[0][0] > 0.5  else "Customer is **not likely to churn**"
+    st.subheader(result_text)
+    st.write(f"Prediction Score: {prediction[0][0]:}")
+
